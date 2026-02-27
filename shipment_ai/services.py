@@ -29,9 +29,11 @@ def extract_text_from_pdf(file_path: str) -> str:
     return text
 
 def parse_shipment_data_from_text(text: str) -> dict:
-    api_key = "AIzaSyBsJF9D26pe6zgZzRga7lKO2eInRYV1m-Q"
+    # Fetch the key dynamically from Render's environment
+    api_key = os.environ.get("GEMINI_API_KEY")
+    
     if not api_key:
-        raise ValueError("GEMINI_API_KEY environment variable not set")
+        raise ValueError("GEMINI_API_KEY environment variable not set. Please check Render dashboard.")
         
     client = genai.Client(api_key=api_key)
     
