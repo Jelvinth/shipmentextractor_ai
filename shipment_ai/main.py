@@ -80,6 +80,28 @@ async def upload_shipment_pdf(file: UploadFile = File(...), db: Session = Depend
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
 
+@app.post("/api/summarize/", response_model=schemas.SummaryResponse)
+async def summarize_shipment_pdf(file: UploadFile = File(...)):
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
+        content = await file.read()
+        temp_file.write(content)
+        temp_file_path = temp_file.name
+
+    try:
+        pdf_text = services.extract_text_from_pdf(temp_file_path)
+        if not pdf_text.strip():
+            raise HTTPException(status_code=400, detail="Could not extract text from PDF")
+
+        summary = services.summarize_shipment_document(pdf_text)
+        return {"summary": summary}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
 
 @app.get("/api/shipment/{container_number}", response_model=schemas.ShipmentResponse)
 def read_shipment(container_number: str, db: Session = Depends(get_db)):

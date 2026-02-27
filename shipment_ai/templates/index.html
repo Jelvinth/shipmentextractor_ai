@@ -321,7 +321,37 @@
                 <div id="search-details"></div>
             </div>
         </div>
+
+        <div class="card">
+            <h2>Summarize Document</h2>
+            <form id="summaryForm">
+                <div class="file-drop-area" id="summaryDropArea">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                        stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        style="margin-bottom: 10px;">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <span class="file-msg">Choose a file or drag it here</span>
+                    <input class="file-input" type="file" id="summaryFile" accept="application/pdf" required>
+                </div>
+                <div id="summary-file-name"
+                    style="margin-top:10px; text-align:center; color: var(--primary-color); font-weight:600;"></div>
+                <button type="submit" class="btn" id="summaryBtn">
+                    <span class="btn-text">Generate Summary</span>
+                    <div class="loader" id="summaryLoader"></div>
+                </button>
+            </form>
+            <div id="summary-error-msg" style="color: var(--error-color); margin-top: 10px; text-align: center; display: none;"></div>
+
+            <div id="summary-display" style="display: none; margin-top: 1.5rem; padding: 1.5rem; border-radius: 12px; background-color: rgba(15, 23, 42, 0.8); border-left: 4px solid var(--primary-color);">
+                <h3 style="margin-top: 0; color: var(--primary-color);">Summary</h3>
+                <div id="summary-text" style="line-height: 1.6;"></div>
+            </div>
+        </div>
     </div>
+
 
     <script>
         // File Drag & Drop Feedback
@@ -480,7 +510,81 @@
                 searchBtn.disabled = false;
             }
         });
+
+        // Summary File Drag & Drop Feedback
+        const summaryDropArea = document.getElementById('summaryDropArea');
+        const summaryFileInput = document.getElementById('summaryFile');
+        const summaryFileNameDisplay = document.getElementById('summary-file-name');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            summaryDropArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            summaryDropArea.addEventListener(eventName, () => summaryDropArea.classList.add('dragover'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            summaryDropArea.addEventListener(eventName, () => summaryDropArea.classList.remove('dragover'), false);
+        });
+
+        summaryFileInput.addEventListener('change', function () {
+            if (this.files && this.files.length > 0) {
+                summaryFileNameDisplay.textContent = this.files[0].name;
+            } else {
+                summaryFileNameDisplay.textContent = '';
+            }
+        });
+
+        // Summary Form Logic
+        document.getElementById('summaryForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = summaryFileInput.files[0];
+            if (!file) return;
+
+            const btnText = document.querySelector('#summaryBtn .btn-text');
+            const loader = document.getElementById('summaryLoader');
+            const summaryBtn = document.getElementById('summaryBtn');
+            const summaryDisplay = document.getElementById('summary-display');
+            const summaryText = document.getElementById('summary-text');
+            const errorMsg = document.getElementById('summary-error-msg');
+
+            btnText.style.display = 'none';
+            loader.style.display = 'block';
+            summaryBtn.disabled = true;
+            summaryDisplay.style.display = 'none';
+            errorMsg.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/api/summarize/', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    let formattedText = (data.summary || 'No summary available').replace(/\n/g, '<br>');
+                    formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                    summaryText.innerHTML = formattedText;
+                    summaryDisplay.style.display = 'block';
+                } else {
+                    errorMsg.textContent = data.detail || 'Failed to summarize document';
+                    errorMsg.style.display = 'block';
+                }
+            } catch (err) {
+                errorMsg.textContent = 'Network Error occurred.';
+                errorMsg.style.display = 'block';
+            } finally {
+                btnText.style.display = 'block';
+                loader.style.display = 'none';
+                summaryBtn.disabled = false;
+            }
+        });
     </script>
+
 </body>
 
 </html>

@@ -26,3 +26,5 @@ class ShipmentResponse(ShipmentBase):
              return "Delayed"
         return "On Time"
 
+class SummaryResponse(BaseModel):
+    summary: str
